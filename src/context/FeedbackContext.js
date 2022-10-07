@@ -1,15 +1,26 @@
-import { createContext, useState } from 'react';
-import { v4 as uuidv4 } from 'uuid';
+import { createContext, useState, useEffect } from 'react';
 import FeedbackData from '../data/feedbackData';
 
 const FeedbackContext = createContext();
 
 export const FeedbackProvider = ({ children }) => {
+  const [isLoading, setIsloading] = useState(true);
   const [feedback, setFeedback] = useState(FeedbackData);
   const [feedbackEdit, setFeedbackEdit] = useState({
     item: {},
     edit: false,
   });
+
+  useEffect(() => {
+    fetchData();
+    setIsloading(false);
+  }, []);
+
+  async function fetchData() {
+    const res = await fetch('/feedback');
+    const data = await res.json();
+    setFeedback(data);
+  }
 
   function handleDelete(id) {
     if (window.confirm('Are you sure you want to delete')) {
@@ -17,13 +28,23 @@ export const FeedbackProvider = ({ children }) => {
     }
   }
 
-  function handleAdd(newFeedback) {
-    newFeedback.id = uuidv4();
-    setFeedback([newFeedback, ...feedback]);
+  async function handleAdd(newFeedback) {
+    const res = await fetch('/feedback', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: { newFeedback },
+    });
+    const data = await res.json();
+
+    setFeedback([data, ...feedback]);
   }
 
   function updateFeedback(id, updItem) {
-    setFeedback(feedback.map((item) =>  item.id === id ? {...item, ...updItem} : item))
+    setFeedback(
+      feedback.map((item) => (item.id === id ? { ...item, ...updItem } : item))
+    );
   }
 
   function editFeedback(item) {
@@ -38,6 +59,7 @@ export const FeedbackProvider = ({ children }) => {
       value={{
         feedback,
         feedbackEdit,
+        isLoading,
         handleDelete,
         handleAdd,
         editFeedback,
